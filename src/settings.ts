@@ -302,7 +302,7 @@ export class MySpacesSettingTab extends PluginSettingTab {
                 if (typeof destBtn.setDestructive === 'function') {
                     destBtn.setDestructive();
                 } else {
-                    btn.setWarning();
+                    btn.setDestructive();
                 }
 
                 btn.onClick(() => {
