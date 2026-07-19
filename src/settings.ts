@@ -1,5 +1,5 @@
 import { App, PluginSettingTab, Setting, ButtonComponent, Notice, SuggestModal, setIcon, TextComponent } from 'obsidian';
-import MyPlugin from './main';
+import MySpacesPlugin from './main';
 
 export interface Space {
     id: string;
@@ -9,7 +9,7 @@ export interface Space {
     exclusions: string[];
 }
 
-export interface MyPluginSettings {
+export interface MySpacesSettings {
     spaces: Space[];
     activeSpaceId: string;
     useDefaultName: boolean;
@@ -24,7 +24,7 @@ export interface MyPluginSettings {
     centerNavButtons: boolean;
 }
 
-export const DEFAULT_SETTINGS: MyPluginSettings = {
+export const DEFAULT_SETTINGS: MySpacesSettings = {
     spaces: [],
     activeSpaceId: 'default',
     useDefaultName: false,
@@ -49,15 +49,14 @@ export const POPULAR_ICONS = [
     'graduation-cap', 'clover', 'flame', 'lightbulb', 'globe', 'heart-handshake', 'hourglass'
 ];
 
-// eslint-disable-next-line obsidianmd/settings-tab/prefer-setting-definitions
 export class MySpacesSettingTab extends PluginSettingTab {
-    plugin: MyPlugin;
+    plugin: MySpacesPlugin;
 
     private newSpaceId: string = '';
     private newSpaceName: string = '';
     private newSpaceIcon: string = 'folder';
 
-    constructor(app: App, plugin: MyPlugin) {
+    constructor(app: App, plugin: MySpacesPlugin) {
         super(app, plugin);
         this.plugin = plugin;
     }
@@ -161,7 +160,7 @@ export class MySpacesSettingTab extends PluginSettingTab {
 
         new Setting(containerEl)
             .setName('Register space hotkeys')
-            .setDesc('Dynamically generate an individual command entry for every space created. Allows setting custom hotkeys via Obsidian options -> Hotkeys. Requires application reload on initial creation.')
+            .setDesc('Dynamically generate an individual command entry for every space created. Allows setting custom hotkeys via Obsidian options -> hotkeys. Requires application reload on initial creation.')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.registerHotkeys)
                 .onChange((value) => {

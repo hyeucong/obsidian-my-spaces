@@ -13,14 +13,14 @@ import {
 
 import {
     DEFAULT_SETTINGS,
-    MyPluginSettings,
+    MySpacesSettings,
     MySpacesSettingTab,
     Space,
     IconSuggestModal
 } from './settings';
 
-export default class MyPlugin extends Plugin {
-    settings!: MyPluginSettings & { showDefaultBtn?: boolean };
+export default class MySpacesPlugin extends Plugin {
+    settings!: MySpacesSettings & { showDefaultBtn?: boolean };
     private isReady: boolean = false;
     private isUnloaded: boolean = false;
     private statusBarEl: HTMLElement | null = null;
@@ -468,10 +468,10 @@ export default class MyPlugin extends Plugin {
     }
 
     applyExplorerFilterState() {
-        let styleEl = document.head.querySelector('#spaces-engine-styles') as HTMLStyleElement;
+        let styleEl = document.getElementById('spaces-engine-styles') as HTMLStyleElement | null;
         if (!styleEl) {
-            // eslint-disable-next-line obsidianmd/no-forbidden-elements
-            styleEl = document.head.createEl('style', { attr: { id: 'spaces-engine-styles' } });
+            document.head.insertAdjacentHTML('beforeend', '<style id="spaces-engine-styles"></style>');
+            styleEl = document.getElementById('spaces-engine-styles') as HTMLStyleElement;
         }
 
         const leaves = this.app.workspace.getLeavesOfType('file-explorer');
@@ -542,7 +542,7 @@ export default class MyPlugin extends Plugin {
             this.statusBarEl.remove();
         }
 
-        document.head.querySelector('#spaces-engine-styles')?.remove();
+        document.getElementById('spaces-engine-styles')?.remove();
 
         const leaves = this.app.workspace.getLeavesOfType('file-explorer');
         leaves.forEach(leaf => {
@@ -562,7 +562,9 @@ export default class MyPlugin extends Plugin {
     }
 
     async loadSettings() {
-        this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+        const loadedData = (await this.loadData()) as unknown;
+        this.settings = Object.assign({}, DEFAULT_SETTINGS, loadedData || {}) as MySpacesSettings & { showDefaultBtn?: boolean };
+
         if (this.settings.showDefaultBtn === undefined) {
             this.settings.showDefaultBtn = true;
         }
@@ -585,12 +587,12 @@ export default class MyPlugin extends Plugin {
 }
 
 class SpaceRenameModal extends Modal {
-    plugin: MyPlugin;
+    plugin: MySpacesPlugin;
     space: Space;
     newName: string = '';
     onSubmit: (newName: string) => void;
 
-    constructor(app: App, plugin: MyPlugin, space: Space, onSubmit: (newName: string) => void) {
+    constructor(app: App, plugin: MySpacesPlugin, space: Space, onSubmit: (newName: string) => void) {
         super(app);
         this.plugin = plugin;
         this.space = space;
@@ -632,12 +634,12 @@ class SpaceRenameModal extends Modal {
 }
 
 class SpaceCreateModal extends Modal {
-    plugin: MyPlugin;
+    plugin: MySpacesPlugin;
     spaceName: string = '';
     spaceIcon: string = 'folder';
     onSubmit: (name: string, icon: string) => void;
 
-    constructor(app: App, plugin: MyPlugin, onSubmit: (name: string, icon: string) => void) {
+    constructor(app: App, plugin: MySpacesPlugin, onSubmit: (name: string, icon: string) => void) {
         super(app);
         this.plugin = plugin;
         this.onSubmit = onSubmit;
