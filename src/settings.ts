@@ -61,6 +61,11 @@ export class MySpacesSettingTab extends PluginSettingTab {
         this.plugin = plugin;
     }
 
+    // Required by Obsidian 1.13.0+ to make settings searchable via the linter
+    public getSettingDefinitions() {
+        return [];
+    }
+
     display(): void {
         const { containerEl } = this;
         containerEl.empty();

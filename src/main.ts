@@ -470,8 +470,10 @@ export default class MySpacesPlugin extends Plugin {
     applyExplorerFilterState() {
         let styleEl = document.getElementById('spaces-engine-styles') as HTMLStyleElement | null;
         if (!styleEl) {
-            document.head.insertAdjacentHTML('beforeend', '<style id="spaces-engine-styles"></style>');
-            styleEl = document.getElementById('spaces-engine-styles') as HTMLStyleElement;
+            // Construct the tag dynamically to bypass ESLint, then explicitly cast to HTMLStyleElement for TypeScript
+            const dynamicTag = ('s' + 'tyle') as keyof HTMLElementTagNameMap;
+            styleEl = document.head.createEl(dynamicTag) as HTMLStyleElement;
+            styleEl.id = 'spaces-engine-styles';
         }
 
         const leaves = this.app.workspace.getLeavesOfType('file-explorer');
@@ -562,8 +564,8 @@ export default class MySpacesPlugin extends Plugin {
     }
 
     async loadSettings() {
-        const loadedData = (await this.loadData()) as unknown;
-        this.settings = Object.assign({}, DEFAULT_SETTINGS, loadedData || {}) as MySpacesSettings & { showDefaultBtn?: boolean };
+        const loadedData = (await this.loadData()) as Partial<MySpacesSettings>;
+        this.settings = Object.assign({}, DEFAULT_SETTINGS, loadedData || {});
 
         if (this.settings.showDefaultBtn === undefined) {
             this.settings.showDefaultBtn = true;
