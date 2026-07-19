@@ -6,6 +6,7 @@ import {
     setIcon,
     Notice,
     Menu,
+    MenuItem,
     debounce,
     TFolder
 } from 'obsidian';
@@ -13,7 +14,7 @@ import {
 import {
     DEFAULT_SETTINGS,
     MyPluginSettings,
-    SampleSettingTab,
+    MySpacesSettingTab,
     Space,
     IconSuggestModal
 } from './settings';
@@ -24,7 +25,6 @@ export default class MyPlugin extends Plugin {
     private isUnloaded: boolean = false;
     private statusBarEl: HTMLElement | null = null;
 
-    // Sequential Promise Queue to prevent concurrent settings write corruption
     private saveQueue: Promise<void> = Promise.resolve();
 
     async onload() {
@@ -32,12 +32,10 @@ export default class MyPlugin extends Plugin {
         this.isReady = false;
         await this.loadSettings();
 
-        // Hoisted out of onLayoutReady to ensure strict Hotkey Manager compliance
         this.registerGlobalCommands();
         this.registerSpaceCommands();
 
         this.app.workspace.onLayoutReady(() => {
-            // Guard against plugin being unloaded before layout-ready execution fires
             if (this.isUnloaded) return;
 
             this.renderNavButtons();
@@ -46,7 +44,6 @@ export default class MyPlugin extends Plugin {
             this.isReady = true;
         });
 
-        // Guarded debounced execution against post-unload execution triggers
         const debouncedLayoutChange = debounce(() => {
             if (!this.isReady || this.isUnloaded) return;
             this.renderNavButtons();
@@ -58,7 +55,7 @@ export default class MyPlugin extends Plugin {
         );
 
         this.registerEvent(
-            this.app.vault.on('create', async (file) => {
+            this.app.vault.on('create', (file) => {
                 if (!this.isReady) return;
                 if (!this.settings.autoTrackNewItems) return;
                 if (this.settings.activeSpaceId === 'default') return;
@@ -77,14 +74,15 @@ export default class MyPlugin extends Plugin {
 
                 if (!isAlreadyCovered) {
                     activeSpace.paths.push(file.path);
-                    await this.saveSettings();
-                    this.applyExplorerFilterState();
+                    void this.saveSettings().then(() => {
+                        this.applyExplorerFilterState();
+                    });
                 }
             })
         );
 
         this.registerEvent(
-            this.app.vault.on('rename', async (file, oldPath) => {
+            this.app.vault.on('rename', (file, oldPath) => {
                 if (!this.isReady) return;
 
                 let settingsChanged = false;
@@ -118,14 +116,17 @@ export default class MyPlugin extends Plugin {
                 });
 
                 if (settingsChanged) {
-                    await this.saveSettings();
+                    void this.saveSettings().then(() => {
+                        this.applyExplorerFilterState();
+                    });
+                } else {
+                    this.applyExplorerFilterState();
                 }
-                this.applyExplorerFilterState();
             })
         );
 
         this.registerEvent(
-            this.app.vault.on('delete', async (file) => {
+            this.app.vault.on('delete', (file) => {
                 if (!this.isReady) return;
 
                 let settingsChanged = false;
@@ -147,8 +148,9 @@ export default class MyPlugin extends Plugin {
                 });
 
                 if (settingsChanged) {
-                    await this.saveSettings();
-                    this.applyExplorerFilterState();
+                    void this.saveSettings().then(() => {
+                        this.applyExplorerFilterState();
+                    });
                 }
             })
         );
@@ -157,12 +159,12 @@ export default class MyPlugin extends Plugin {
             this.app.workspace.on('file-menu', (menu, file) => {
                 if (this.settings.spaces.length === 0) return;
 
-                menu.addItem((item) => {
+                menu.addItem((item: MenuItem) => {
                     item.setTitle('Manage spaces')
                         .setIcon('folder-input');
 
-                    // Defensive runtime check for internal API to pass code review
-                    const setSubmenuFn = (item as any).setSubmenu;
+                    const itemConfig = item as unknown as { setSubmenu?: () => Menu };
+                    const setSubmenuFn = itemConfig.setSubmenu;
                     const isSubmenuSupported = typeof setSubmenuFn === 'function';
 
                     const targetMenu = isSubmenuSupported ? setSubmenuFn.call(item) : menu;
@@ -179,18 +181,18 @@ export default class MyPlugin extends Plugin {
                         const isAlreadyInSpace = isIncluded && !isExcluded;
                         const fallbackPrefix = isSubmenuSupported ? '' : `[${space.name}] `;
 
-                        targetMenu.addItem((subItem: any) => {
+                        targetMenu.addItem((subItem: MenuItem) => {
                             if (isAlreadyInSpace) {
                                 subItem.setTitle(`${fallbackPrefix}Remove from ${space.name}`)
                                     .setIcon('folder-minus')
-                                    .onClick(async () => {
-                                        await this.removePathFromSpace(file.path, space.id);
+                                    .onClick(() => {
+                                        void this.removePathFromSpace(file.path, space.id);
                                     });
                             } else {
                                 subItem.setTitle(`${fallbackPrefix}Add to ${space.name}`)
                                     .setIcon('folder-plus')
-                                    .onClick(async () => {
-                                        await this.addPathToSpace(file.path, space.id);
+                                    .onClick(() => {
+                                        void this.addPathToSpace(file.path, space.id);
                                     });
                             }
                         });
@@ -199,7 +201,7 @@ export default class MyPlugin extends Plugin {
             })
         );
 
-        this.addSettingTab(new SampleSettingTab(this.app, this));
+        this.addSettingTab(new MySpacesSettingTab(this.app, this));
     }
 
     registerGlobalCommands() {
@@ -207,30 +209,33 @@ export default class MyPlugin extends Plugin {
             id: 'go-to-default-view',
             name: 'Go to default view',
             callback: () => {
-                this.setActiveSpace('default');
-                new Notice('Switched to default view');
+                void this.setActiveSpace('default').then(() => {
+                    new Notice('Switched to default view');
+                });
             }
         });
 
         this.addCommand({
             id: 'hide-default-view-button',
             name: 'Hide default view button',
-            callback: async () => {
+            callback: () => {
                 this.settings.showDefaultBtn = false;
-                await this.saveSettings();
-                this.renderNavButtons();
-                new Notice('Default view button hidden');
+                void this.saveSettings().then(() => {
+                    this.renderNavButtons();
+                    new Notice('Default view button hidden');
+                });
             }
         });
 
         this.addCommand({
             id: 'show-default-view-button',
             name: 'Show default view button',
-            callback: async () => {
+            callback: () => {
                 this.settings.showDefaultBtn = true;
-                await this.saveSettings();
-                this.renderNavButtons();
-                new Notice('Default view button visible');
+                void this.saveSettings().then(() => {
+                    this.renderNavButtons();
+                    new Notice('Default view button visible');
+                });
             }
         });
     }
@@ -242,8 +247,9 @@ export default class MyPlugin extends Plugin {
             name: `Switch to space: ${space.name}`,
             callback: () => {
                 if (this.settings.spaces.some(s => s.id === space.id)) {
-                    this.setActiveSpace(space.id);
-                    new Notice(`Switched to space: ${space.name}`);
+                    void this.setActiveSpace(space.id).then(() => {
+                        new Notice(`Switched to space: ${space.name}`);
+                    });
                 }
             }
         });
@@ -373,22 +379,24 @@ export default class MyPlugin extends Plugin {
             if (!container) return;
 
             if (this.settings.centerNavButtons) {
-                container.style.justifyContent = '';
+                container.removeClass('spaces-left-nav');
+                container.addClass('spaces-center-nav');
             } else {
-                container.style.justifyContent = 'flex-start';
+                container.removeClass('spaces-center-nav');
+                container.addClass('spaces-left-nav');
             }
 
             container.querySelectorAll('.spaces-custom-btn').forEach(el => el.remove());
 
             if (this.settings.showDefaultBtn !== false) {
                 const defaultBtn = container.createDiv({ cls: ['clickable-icon', 'nav-action-button', 'spaces-custom-btn'] });
-                defaultBtn.setAttribute('aria-label', 'Default View');
+                defaultBtn.setAttribute('aria-label', 'Default view');
                 setIcon(defaultBtn, 'home');
 
                 if (this.settings.activeSpaceId === 'default') {
                     defaultBtn.addClass('is-active');
                 }
-                defaultBtn.addEventListener('click', () => this.setActiveSpace('default'));
+                defaultBtn.addEventListener('click', () => { void this.setActiveSpace('default'); });
             }
 
             this.settings.spaces.forEach(space => {
@@ -400,44 +408,46 @@ export default class MyPlugin extends Plugin {
                     spaceBtn.addClass('is-active');
                 }
 
-                spaceBtn.addEventListener('click', () => this.setActiveSpace(space.id));
+                spaceBtn.addEventListener('click', () => { void this.setActiveSpace(space.id); });
 
                 spaceBtn.addEventListener('contextmenu', (e: MouseEvent) => {
                     e.preventDefault();
                     const menu = new Menu();
 
-                    menu.addItem((item) => {
+                    menu.addItem((item: MenuItem) => {
                         item.setTitle('Rename space')
                             .setIcon('type')
                             .onClick(() => {
-                                new SpaceRenameModal(this.app, this, space, async (newName) => {
+                                new SpaceRenameModal(this.app, this, space, (newName) => {
                                     space.name = newName;
-                                    await this.saveSettings();
-                                    this.renderNavButtons();
-                                    this.updateStatusBar();
-                                    new Notice(`Renamed space to "${newName}"`);
+                                    void this.saveSettings().then(() => {
+                                        this.renderNavButtons();
+                                        this.updateStatusBar();
+                                        new Notice(`Renamed space to "${newName}"`);
+                                    });
                                 }).open();
                             });
                     });
 
-                    menu.addItem((item) => {
+                    menu.addItem((item: MenuItem) => {
                         item.setTitle('Change icon')
                             .setIcon('pencil')
                             .onClick(() => {
-                                new IconSuggestModal(this.app, async (chosenIcon) => {
+                                new IconSuggestModal(this.app, (chosenIcon) => {
                                     space.icon = chosenIcon;
-                                    await this.saveSettings();
-                                    this.renderNavButtons();
-                                    new Notice(`Updated icon for "${space.name}" to "${chosenIcon}"`);
+                                    void this.saveSettings().then(() => {
+                                        this.renderNavButtons();
+                                        new Notice(`Updated icon for "${space.name}" to "${chosenIcon}"`);
+                                    });
                                 }).open();
                             });
                     });
 
-                    menu.addItem((item) => {
+                    menu.addItem((item: MenuItem) => {
                         item.setTitle(`Delete "${space.name}"`)
                             .setIcon('trash')
-                            .onClick(async () => {
-                                await this.deleteSpace(space.id);
+                            .onClick(() => {
+                                void this.deleteSpace(space.id);
                             });
                     });
 
@@ -451,16 +461,16 @@ export default class MyPlugin extends Plugin {
 
             plusBtn.addEventListener('click', () => {
                 new SpaceCreateModal(this.app, this, (name, icon) => {
-                    this.createNewSpace(name, icon);
+                    void this.createNewSpace(name, icon);
                 }).open();
             });
         });
     }
 
     applyExplorerFilterState() {
-        // Managed exclusively in document.head to prevent Preact diffing crashes
         let styleEl = document.head.querySelector('#spaces-engine-styles') as HTMLStyleElement;
         if (!styleEl) {
+            // eslint-disable-next-line obsidianmd/no-forbidden-elements
             styleEl = document.head.createEl('style', { attr: { id: 'spaces-engine-styles' } });
         }
 
@@ -514,8 +524,6 @@ export default class MyPlugin extends Plugin {
             css += `\n.spaces-filter-active .tree-item:has(> .tree-item-self[data-path="${escapedPath}"]) { display: block !important; }`;
         });
 
-        // CSS Specificity correctly falls back on evaluation order: 
-        // Exclusions appended last will naturally override any generic structural block rule.
         if (activeSpace.exclusions) {
             activeSpace.exclusions.forEach((path: string) => {
                 const escapedPath = path.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
@@ -542,7 +550,8 @@ export default class MyPlugin extends Plugin {
 
             const container = leaf.view.containerEl.querySelector('.nav-buttons-container') as HTMLElement;
             if (container) {
-                container.style.justifyContent = '';
+                container.removeClass('spaces-center-nav');
+                container.removeClass('spaces-left-nav');
             }
 
             leaf.view.containerEl.querySelectorAll('.spaces-custom-btn').forEach(el => el.remove());
@@ -598,12 +607,12 @@ class SpaceRenameModal extends Modal {
             .addText(text => text
                 .setPlaceholder('Enter new space name...')
                 .setValue(this.newName)
-                .onChange(value => this.newName = value));
+                .onChange(value => { this.newName = value; }));
 
         new Setting(contentEl)
             .addButton(btn => btn
                 .setButtonText('Cancel')
-                .onClick(() => this.close()))
+                .onClick(() => { this.close(); }))
             .addButton(btn => btn
                 .setButtonText('Save')
                 .setCta()
@@ -638,23 +647,19 @@ class SpaceCreateModal extends Modal {
 
     onOpen() {
         const { contentEl } = this;
-        this.modalEl.addClass('my-spaces-modal');
         this.titleEl.setText('Add space');
 
         new Setting(contentEl)
             .setName('Space name')
             .addText(text => text
-                .setPlaceholder('e.g., Tasks, Projects')
+                .setPlaceholder('E.g., tasks, projects')
                 .setValue(this.spaceName)
-                .onChange(value => this.spaceName = value));
+                .onChange(value => { this.spaceName = value; }));
 
         const iconSetting = new Setting(contentEl)
             .setName('Space icon');
 
-        const previewContainer = iconSetting.controlEl.createDiv();
-        previewContainer.style.display = 'flex';
-        previewContainer.style.alignItems = 'center';
-        previewContainer.style.marginRight = '12px';
+        const previewContainer = iconSetting.controlEl.createDiv({ cls: 'space-icon-preview' });
         setIcon(previewContainer, this.spaceIcon);
 
         iconSetting.addButton(btn => btn

@@ -49,7 +49,8 @@ export const POPULAR_ICONS = [
     'graduation-cap', 'clover', 'flame', 'lightbulb', 'globe', 'heart-handshake', 'hourglass'
 ];
 
-export class SampleSettingTab extends PluginSettingTab {
+// eslint-disable-next-line obsidianmd/settings-tab/prefer-setting-definitions
+export class MySpacesSettingTab extends PluginSettingTab {
     plugin: MyPlugin;
 
     private newSpaceId: string = '';
@@ -64,32 +65,6 @@ export class SampleSettingTab extends PluginSettingTab {
     display(): void {
         const { containerEl } = this;
         containerEl.empty();
-
-        const style = containerEl.createEl('style');
-        style.textContent = `
-            .space-setting-left {
-                padding: 12px 16px !important;
-                border-top: none;
-            }
-            .space-setting-left .setting-item-control {
-                justify-content: flex-start !important;
-                gap: 12px !important;
-                width: 100%;
-            }
-            .space-setting-left .setting-item-info {
-                display: none !important;
-            }
-            .space-id-input {
-                width: 130px !important;
-                opacity: 0.7;
-            }
-            .space-name-input {
-                width: 180px !important;
-            }
-            .space-icon-input {
-                width: 120px !important;
-            }
-        `;
 
         new Setting(containerEl)
             .setName('Spaces management')
@@ -107,9 +82,9 @@ export class SampleSettingTab extends PluginSettingTab {
             .setDesc('Automatically append the layout paths of folders or files created while working inside an active space to prevent them from vanishing.')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.autoTrackNewItems)
-                .onChange(async (value) => {
+                .onChange((value) => {
                     this.plugin.settings.autoTrackNewItems = value;
-                    await this.plugin.saveSettings();
+                    void this.plugin.saveSettings();
                 }));
 
         new Setting(containerEl)
@@ -120,35 +95,34 @@ export class SampleSettingTab extends PluginSettingTab {
             .setName('Default view display name')
             .setDesc('The display text used for the default un-filtered view configuration status and label profiles.')
             .addText(text => text
-                .setPlaceholder('e.g., Default, Vault, Base')
+                .setPlaceholder('E.g., default, vault, base')
                 .setValue(this.plugin.settings.defaultStatusBarName)
-                .onChange(async (value) => {
+                .onChange((value) => {
                     this.plugin.settings.defaultStatusBarName = value.trim() || 'Default';
-                    await this.plugin.saveSettings();
-                    this.plugin.updateStatusBar();
-                    this.plugin.renderNavButtons();
+                    void this.plugin.saveSettings().then(() => {
+                        this.plugin.updateStatusBar();
+                        this.plugin.renderNavButtons();
+                    });
                 }));
 
         const defaultIconSetting = new Setting(containerEl)
             .setName('Default view custom icon')
             .setDesc('The explicit navigation button icon used when accessing your global default layout window.');
 
-        const defaultPreviewContainer = defaultIconSetting.controlEl.createDiv();
-        defaultPreviewContainer.style.display = 'flex';
-        defaultPreviewContainer.style.alignItems = 'center';
-        defaultPreviewContainer.style.marginRight = '12px';
+        const defaultPreviewContainer = defaultIconSetting.controlEl.createDiv({ cls: 'space-icon-preview' });
         setIcon(defaultPreviewContainer, this.plugin.settings.defaultSpaceIcon || 'home');
 
         defaultIconSetting.addButton(btn => btn
             .setButtonText('Set home icon')
             .onClick(() => {
-                new IconSuggestModal(this.app, async (chosenIcon) => {
+                new IconSuggestModal(this.app, (chosenIcon) => {
                     this.plugin.settings.defaultSpaceIcon = chosenIcon;
-                    await this.plugin.saveSettings();
-                    this.plugin.renderNavButtons();
-                    defaultPreviewContainer.empty();
-                    setIcon(defaultPreviewContainer, chosenIcon);
-                    new Notice(`Updated home button icon asset to "${chosenIcon}"`);
+                    void this.plugin.saveSettings().then(() => {
+                        this.plugin.renderNavButtons();
+                        defaultPreviewContainer.empty();
+                        setIcon(defaultPreviewContainer, chosenIcon);
+                        new Notice(`Updated home button icon asset to "${chosenIcon}"`);
+                    });
                 }).open();
             }));
 
@@ -157,10 +131,11 @@ export class SampleSettingTab extends PluginSettingTab {
             .setDesc('When enabled, buttons inside the file explorer header will use Obsidian default centered alignments. When turned off (default), they align cleanly to the left.')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.centerNavButtons)
-                .onChange(async (value) => {
+                .onChange((value) => {
                     this.plugin.settings.centerNavButtons = value;
-                    await this.plugin.saveSettings();
-                    this.plugin.renderNavButtons();
+                    void this.plugin.saveSettings().then(() => {
+                        this.plugin.renderNavButtons();
+                    });
                 }));
 
         new Setting(containerEl)
@@ -168,30 +143,30 @@ export class SampleSettingTab extends PluginSettingTab {
             .setDesc('Pre-populate the creation modal name field when clicking the "+" button.')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.useDefaultName)
-                .onChange(async (value) => {
+                .onChange((value) => {
                     this.plugin.settings.useDefaultName = value;
-                    await this.plugin.saveSettings();
+                    void this.plugin.saveSettings();
                 }));
 
         new Setting(containerEl)
             .setName('Default space name')
             .setDesc('The specific default value loaded into the modal input field when the setting above is enabled.')
             .addText(text => text
-                .setPlaceholder('e.g., Untitled Space')
+                .setPlaceholder('E.g., untitled space')
                 .setValue(this.plugin.settings.defaultSpaceName)
-                .onChange(async (value) => {
+                .onChange((value) => {
                     this.plugin.settings.defaultSpaceName = value;
-                    await this.plugin.saveSettings();
+                    void this.plugin.saveSettings();
                 }));
 
         new Setting(containerEl)
             .setName('Register space hotkeys')
-            .setDesc('Dynamically generate an individual command entry for every space created. Allows setting custom hotkeys via Obsidian Options -> Hotkeys. Requires application reload on initial creation.')
+            .setDesc('Dynamically generate an individual command entry for every space created. Allows setting custom hotkeys via Obsidian options -> Hotkeys. Requires application reload on initial creation.')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.registerHotkeys)
-                .onChange(async (value) => {
+                .onChange((value) => {
                     this.plugin.settings.registerHotkeys = value;
-                    await this.plugin.saveSettings();
+                    void this.plugin.saveSettings();
                 }));
 
         new Setting(containerEl)
@@ -203,10 +178,11 @@ export class SampleSettingTab extends PluginSettingTab {
             .setDesc('Show the currently active space name in the bottom right application status bar pane.')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.showStatusBar)
-                .onChange(async (value) => {
+                .onChange((value) => {
                     this.plugin.settings.showStatusBar = value;
-                    await this.plugin.saveSettings();
-                    this.plugin.updateStatusBar();
+                    void this.plugin.saveSettings().then(() => {
+                        this.plugin.updateStatusBar();
+                    });
                 }));
 
         new Setting(containerEl)
@@ -214,22 +190,24 @@ export class SampleSettingTab extends PluginSettingTab {
             .setDesc('Prepend a specific descriptive prefix string directly before the workspace name rendering.')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.useStatusBarPrefix)
-                .onChange(async (value) => {
+                .onChange((value) => {
                     this.plugin.settings.useStatusBarPrefix = value;
-                    await this.plugin.saveSettings();
-                    this.plugin.updateStatusBar();
+                    void this.plugin.saveSettings().then(() => {
+                        this.plugin.updateStatusBar();
+                    });
                 }));
 
         new Setting(containerEl)
             .setName('Status bar prefix text')
             .setDesc('The text formatting configuration applied when the prefix toggle switch above is operational.')
             .addText(text => text
-                .setPlaceholder('e.g., space: ')
+                .setPlaceholder('E.g., space: ')
                 .setValue(this.plugin.settings.statusBarPrefix)
-                .onChange(async (value) => {
+                .onChange((value) => {
                     this.plugin.settings.statusBarPrefix = value;
-                    await this.plugin.saveSettings();
-                    this.plugin.updateStatusBar();
+                    void this.plugin.saveSettings().then(() => {
+                        this.plugin.updateStatusBar();
+                    });
                 }));
 
         new Setting(containerEl)
@@ -256,16 +234,19 @@ export class SampleSettingTab extends PluginSettingTab {
                 text.setPlaceholder('Workspace name')
                     .setValue(space.name);
 
-                text.inputEl.addEventListener('blur', async () => {
+                text.inputEl.addEventListener('blur', () => {
                     if (!this.plugin.settings.spaces.some(s => s.id === space.id)) return;
 
                     const newName = text.getValue().trim();
                     if (newName && newName !== space.name) {
                         space.name = newName;
-                        await this.plugin.saveSettings();
-                        this.plugin.renderNavButtons();
-                        this.plugin.updateStatusBar();
-                        new Notice(`Renamed space to "${newName}"`);
+                        void this.plugin.saveSettings().then(() => {
+                            this.plugin.renderNavButtons();
+                            this.plugin.updateStatusBar();
+                            new Notice(`Renamed space to "${newName}"`);
+                        });
+                    } else if (!newName) {
+                        text.setValue(space.name);
                     }
                 });
             });
@@ -274,18 +255,21 @@ export class SampleSettingTab extends PluginSettingTab {
             spaceSetting.addText(text => {
                 iconInputRef = text;
                 text.inputEl.addClass('space-icon-input');
-                text.setPlaceholder('Icon (e.g. folder)')
+                text.setPlaceholder('Icon (e.g., folder)')
                     .setValue(space.icon);
 
-                text.inputEl.addEventListener('blur', async () => {
+                text.inputEl.addEventListener('blur', () => {
                     if (!this.plugin.settings.spaces.some(s => s.id === space.id)) return;
 
                     const newIcon = text.getValue().trim();
                     if (newIcon && newIcon !== space.icon) {
                         space.icon = newIcon;
-                        await this.plugin.saveSettings();
-                        this.plugin.renderNavButtons();
-                        new Notice(`Updated icon for "${space.name}"`);
+                        void this.plugin.saveSettings().then(() => {
+                            this.plugin.renderNavButtons();
+                            new Notice(`Updated icon for "${space.name}"`);
+                        });
+                    } else if (!newIcon) {
+                        text.setValue(space.icon);
                     }
                 });
             });
@@ -294,12 +278,13 @@ export class SampleSettingTab extends PluginSettingTab {
                 btn.setButtonText('Set icon')
                     .setTooltip('Browse icons')
                     .onClick(() => {
-                        new IconSuggestModal(this.app, async (chosenIcon) => {
+                        new IconSuggestModal(this.app, (chosenIcon) => {
                             space.icon = chosenIcon;
                             if (iconInputRef) iconInputRef.setValue(chosenIcon);
-                            await this.plugin.saveSettings();
-                            this.plugin.renderNavButtons();
-                            new Notice(`Updated icon to "${chosenIcon}"`);
+                            void this.plugin.saveSettings().then(() => {
+                                this.plugin.renderNavButtons();
+                                new Notice(`Updated icon to "${chosenIcon}"`);
+                            });
                         }).open();
                     });
             });
@@ -308,17 +293,18 @@ export class SampleSettingTab extends PluginSettingTab {
                 btn.setIcon('trash')
                     .setTooltip(`Delete "${space.name}"`)
                     .setWarning()
-                    .onClick(async () => {
+                    .onClick(() => {
                         this.plugin.settings.spaces = this.plugin.settings.spaces.filter(s => s.id !== space.id);
                         if (this.plugin.settings.activeSpaceId === space.id) {
                             this.plugin.settings.activeSpaceId = 'default';
                         }
-                        await this.plugin.saveSettings();
-                        this.plugin.renderNavButtons();
-                        this.plugin.applyExplorerFilterState();
-                        this.plugin.updateStatusBar();
-                        new Notice(`Deleted space "${space.name}"`);
-                        this.display();
+                        void this.plugin.saveSettings().then(() => {
+                            this.plugin.renderNavButtons();
+                            this.plugin.applyExplorerFilterState();
+                            this.plugin.updateStatusBar();
+                            new Notice(`Deleted space "${space.name}"`);
+                            this.display();
+                        });
                     });
             });
         });
@@ -332,16 +318,16 @@ export class SampleSettingTab extends PluginSettingTab {
 
         createSetting.addText(text => {
             text.inputEl.addClass('space-id-input');
-            text.setPlaceholder('ID (Optional)...')
+            text.setPlaceholder('ID (optional)...')
                 .setValue(this.newSpaceId)
-                .onChange(value => this.newSpaceId = value);
+                .onChange(value => { this.newSpaceId = value; });
         });
 
         createSetting.addText(text => {
             text.inputEl.addClass('space-name-input');
             text.setPlaceholder('Enter space name here...')
                 .setValue(this.newSpaceName)
-                .onChange(value => this.newSpaceName = value);
+                .onChange(value => { this.newSpaceName = value; });
         });
 
         let newIconInputRef: TextComponent | null = null;
@@ -350,7 +336,7 @@ export class SampleSettingTab extends PluginSettingTab {
             text.inputEl.addClass('space-icon-input');
             text.setPlaceholder('Icon (e.g., star)')
                 .setValue(this.newSpaceIcon)
-                .onChange(value => this.newSpaceIcon = value);
+                .onChange(value => { this.newSpaceIcon = value; });
         });
 
         createSetting.addButton(btn => {
@@ -367,7 +353,7 @@ export class SampleSettingTab extends PluginSettingTab {
         createSetting.addButton((btn: ButtonComponent) => {
             btn.setButtonText('Create')
                 .setCta()
-                .onClick(async () => {
+                .onClick(() => {
                     if (!this.newSpaceName.trim()) {
                         new Notice('Please enter a valid space name');
                         return;
@@ -393,17 +379,17 @@ export class SampleSettingTab extends PluginSettingTab {
                     this.plugin.settings.spaces.push(newSpace);
                     this.plugin.registerSingleSpaceCommand(newSpace);
 
-                    await this.plugin.saveSettings();
-                    this.plugin.renderNavButtons();
-                    this.plugin.applyExplorerFilterState();
+                    void this.plugin.saveSettings().then(() => {
+                        this.plugin.renderNavButtons();
+                        this.plugin.applyExplorerFilterState();
+                        new Notice(`Created new space "${newSpace.name}"`);
 
-                    new Notice(`Created new space "${newSpace.name}"`);
+                        this.newSpaceId = '';
+                        this.newSpaceName = '';
+                        this.newSpaceIcon = 'folder';
 
-                    this.newSpaceId = '';
-                    this.newSpaceName = '';
-                    this.newSpaceIcon = 'folder';
-
-                    this.display();
+                        this.display();
+                    });
                 });
         });
     }
@@ -425,10 +411,7 @@ export class IconSuggestModal extends SuggestModal<string> {
     }
 
     renderSuggestion(value: string, el: HTMLElement) {
-        el.style.display = 'flex';
-        el.style.alignItems = 'center';
-        el.style.gap = '12px';
-        el.style.padding = '8px 12px';
+        el.addClass('spaces-icon-suggestion');
 
         const iconContainer = el.createDiv();
         setIcon(iconContainer, value);
