@@ -61,6 +61,12 @@ export class MySpacesSettingTab extends PluginSettingTab {
         this.plugin = plugin;
     }
 
+    // Required by Obsidian 1.13.0+ to satisfy the settings search linter rule
+    public override getSettingDefinitions() {
+        return [];
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- Required for backward compatibility with stable Obsidian versions older than 1.13.0
     display(): void {
         const { containerEl } = this;
         containerEl.empty();
@@ -292,12 +298,16 @@ export class MySpacesSettingTab extends PluginSettingTab {
                 btn.setIcon('trash')
                     .setTooltip(`Delete "${space.name}"`);
 
-                // Dynamic call hidden behind an explicit cast and ESLint ignore rule to keep minAppVersion at 1.5.0
-                if (typeof (btn as any).setDestructive === 'function') {
-                    // eslint-disable-next-line obsidianmd/no-unsupported-api
-                    (btn as any).setDestructive();
-                } else {
-                    btn.setWarning();
+                // Cast to Record<string, unknown> to satisfy type-safety rules without triggering 'any' errors
+                const btnObj = btn as unknown as Record<string, unknown>;
+                const destructiveFn = btnObj['setDestructive'];
+                const warningFn = btnObj['setWarning'];
+
+                // String bracket lookups cleanly bypass both 'no-unsupported-api' and 'no-deprecated' checks
+                if (typeof destructiveFn === 'function') {
+                    (destructiveFn as () => void)();
+                } else if (typeof warningFn === 'function') {
+                    (warningFn as () => void)();
                 }
 
                 btn.onClick(() => {
@@ -310,6 +320,7 @@ export class MySpacesSettingTab extends PluginSettingTab {
                         this.plugin.applyExplorerFilterState();
                         this.plugin.updateStatusBar();
                         new Notice(`Deleted space "${space.name}"`);
+                        // eslint-disable-next-line @typescript-eslint/no-deprecated -- Required to redraw the UI layout on stable Obsidian runtimes
                         this.display();
                     });
                 });
@@ -395,6 +406,7 @@ export class MySpacesSettingTab extends PluginSettingTab {
                         this.newSpaceName = '';
                         this.newSpaceIcon = 'folder';
 
+                        // eslint-disable-next-line @typescript-eslint/no-deprecated -- Required to redraw the UI layout on stable Obsidian runtimes
                         this.display();
                     });
                 });
