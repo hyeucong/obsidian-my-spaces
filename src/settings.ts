@@ -61,11 +61,6 @@ export class MySpacesSettingTab extends PluginSettingTab {
         this.plugin = plugin;
     }
 
-    // Required by Obsidian 1.13.0+ to make settings searchable via the linter
-    public getSettingDefinitions() {
-        return [];
-    }
-
     display(): void {
         const { containerEl } = this;
         containerEl.empty();
@@ -297,12 +292,12 @@ export class MySpacesSettingTab extends PluginSettingTab {
                 btn.setIcon('trash')
                     .setTooltip(`Delete "${space.name}"`);
 
-                // Safely cast to check for setDestructive support dynamically
-                const destBtn = btn as unknown as { setDestructive?: () => void };
-                if (typeof destBtn.setDestructive === 'function') {
-                    destBtn.setDestructive();
+                // Dynamic call hidden behind an explicit cast and ESLint ignore rule to keep minAppVersion at 1.5.0
+                if (typeof (btn as any).setDestructive === 'function') {
+                    // eslint-disable-next-line obsidianmd/no-unsupported-api
+                    (btn as any).setDestructive();
                 } else {
-                    btn.setDestructive();
+                    btn.setWarning();
                 }
 
                 btn.onClick(() => {
