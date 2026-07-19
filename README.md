@@ -2,7 +2,7 @@
 
 Create clean, minimal spaces to control which files and folders appear in your sidebar. Managing your file tree shouldn't be hard or clunky.
 
-<video src="https://github.com/YOUR_USERNAME/my-spaces/raw/main/assets/demo.mp4" width="100%" controls playsinline></video>
+![My Spaces Demo](https://github.com/hyeucong/obsidian-my-spaces/raw/main/assets/demo.gif)
 
 ## Features
 - Create and manage multiple spaces with custom names and icons
