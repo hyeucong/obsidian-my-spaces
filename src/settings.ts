@@ -227,7 +227,7 @@ export class MySpacesSettingTab extends SafeSettingTab {
             .setHeading();
 
         if (this.plugin.settings.spaces.length === 0) {
-            containerEl.createEl('p', { text: 'No spaces configured yet. Create one below!', cls: 'setting-item-description' });
+            containerEl.createDiv({ text: 'No spaces configured yet. Create one below!', cls: 'spaces-empty-notice' });
         }
 
         this.plugin.settings.spaces.forEach((space) => {
@@ -305,15 +305,8 @@ export class MySpacesSettingTab extends SafeSettingTab {
                 btn.setIcon('trash')
                     .setTooltip(`Delete "${space.name}"`);
 
-                const btnObj = btn as unknown as Record<string, unknown>;
-                const destructiveFn = btnObj['setDestructive'];
-                const warningFn = btnObj['setWarning'];
-
-                if (typeof destructiveFn === 'function') {
-                    (destructiveFn as () => void)();
-                } else if (typeof warningFn === 'function') {
-                    (warningFn as () => void)();
-                }
+                // Style the button as destructive natively. No setWarning, no crashes.
+                btn.buttonEl.classList.add('mod-warning');
 
                 btn.onClick(() => {
                     this.plugin.settings.spaces = this.plugin.settings.spaces.filter(s => s.id !== space.id);

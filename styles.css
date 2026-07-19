@@ -5,8 +5,12 @@
 }
 
 .vertical-tab-content .setting-item.space-setting-left .setting-item-control {
+    display: flex;
+    flex-wrap: wrap;
+    /* Fix: Forces elements to wrap cleanly instead of clipping out */
     justify-content: flex-start;
-    gap: 12px;
+    gap: 8px 12px;
+    /* Row gap & column gap for wrapping structure */
     width: 100%;
 }
 
@@ -20,11 +24,26 @@
 }
 
 .vertical-tab-content .setting-item.space-setting-left .space-name-input {
-    width: 180px;
+    flex-grow: 1;
+    /* Better responsive sizing */
+    min-width: 150px;
+    max-width: 220px;
 }
 
 .vertical-tab-content .setting-item.space-setting-left .space-icon-input {
     width: 120px;
+}
+
+/* Fix: The stylized dark box container for empty states */
+.spaces-empty-notice {
+    background-color: var(--background-secondary-alt);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    padding: 16px;
+    color: var(--text-muted);
+    font-size: var(--font-ui-small);
+    text-align: center;
+    margin: 12px 0 20px 0;
 }
 
 /* Icon Preview Layouts */
