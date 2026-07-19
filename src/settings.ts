@@ -295,21 +295,29 @@ export class MySpacesSettingTab extends PluginSettingTab {
 
             spaceSetting.addButton(btn => {
                 btn.setIcon('trash')
-                    .setTooltip(`Delete "${space.name}"`)
-                    .setWarning()
-                    .onClick(() => {
-                        this.plugin.settings.spaces = this.plugin.settings.spaces.filter(s => s.id !== space.id);
-                        if (this.plugin.settings.activeSpaceId === space.id) {
-                            this.plugin.settings.activeSpaceId = 'default';
-                        }
-                        void this.plugin.saveSettings().then(() => {
-                            this.plugin.renderNavButtons();
-                            this.plugin.applyExplorerFilterState();
-                            this.plugin.updateStatusBar();
-                            new Notice(`Deleted space "${space.name}"`);
-                            this.display();
-                        });
+                    .setTooltip(`Delete "${space.name}"`);
+
+                // Safely cast to check for setDestructive support dynamically
+                const destBtn = btn as unknown as { setDestructive?: () => void };
+                if (typeof destBtn.setDestructive === 'function') {
+                    destBtn.setDestructive();
+                } else {
+                    btn.setWarning();
+                }
+
+                btn.onClick(() => {
+                    this.plugin.settings.spaces = this.plugin.settings.spaces.filter(s => s.id !== space.id);
+                    if (this.plugin.settings.activeSpaceId === space.id) {
+                        this.plugin.settings.activeSpaceId = 'default';
+                    }
+                    void this.plugin.saveSettings().then(() => {
+                        this.plugin.renderNavButtons();
+                        this.plugin.applyExplorerFilterState();
+                        this.plugin.updateStatusBar();
+                        new Notice(`Deleted space "${space.name}"`);
+                        this.display();
                     });
+                });
             });
         });
 
