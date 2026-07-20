@@ -64,3 +64,39 @@
 .nav-buttons-container.spaces-left-nav {
     justify-content: flex-start;
 }
+
+/* --- Full-Width Responsive Icon Grid Modal --- */
+.spaces-icon-modal .prompt-results {
+    padding: 8px 12px;
+}
+
+.spaces-icon-row {
+    display: grid !important;
+    grid-template-columns: repeat(12, 1fr);
+    justify-items: center;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 0 !important;
+    background: transparent !important;
+}
+
+.spaces-icon-row.is-selected {
+    background: transparent !important;
+}
+
+.spaces-icon-grid-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: color 0.15s, background-color 0.15s;
+}
+
+.spaces-icon-grid-item:hover {
+    background-color: var(--background-modifier-hover);
+    color: var(--text-normal);
+}
