@@ -52,6 +52,32 @@ export function registerGlobalCommands(plugin: MySpacesPlugin) {
             });
         }
     });
+
+    // Command to hide all created space buttons
+    plugin.addCommand({
+        id: 'hide-space-buttons',
+        name: 'Hide all space buttons',
+        callback: () => {
+            plugin.settings.showSpacesBtns = false;
+            void plugin.saveSettings().then(() => {
+                plugin.renderNavButtons();
+                plugin.showNotice('All space buttons hidden');
+            });
+        }
+    });
+
+    // Command to show all created space buttons
+    plugin.addCommand({
+        id: 'show-space-buttons',
+        name: 'Show all space buttons',
+        callback: () => {
+            plugin.settings.showSpacesBtns = true;
+            void plugin.saveSettings().then(() => {
+                plugin.renderNavButtons();
+                plugin.showNotice('All space buttons visible');
+            });
+        }
+    });
 }
 
 /**

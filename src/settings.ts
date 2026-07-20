@@ -19,6 +19,8 @@ export interface MySpacesSettings {
     defaultSpaceName: string;
     registerHotkeys: boolean;
     showNotifications: boolean;
+    showDefaultBtn: boolean;
+    showSpacesBtns: boolean;
     showStatusBar: boolean;
     useStatusBarPrefix: boolean;
     statusBarPrefix: string;
@@ -37,6 +39,8 @@ export const DEFAULT_SETTINGS: MySpacesSettings = {
     defaultSpaceName: 'Untitled Space',
     registerHotkeys: false,
     showNotifications: true,
+    showDefaultBtn: true,
+    showSpacesBtns: true,
     showStatusBar: false,
     useStatusBarPrefix: false,
     statusBarPrefix: 'Space: ',
@@ -105,6 +109,71 @@ export class MySpacesSettingTab extends SafeSettingTab {
                 }));
 
         new Setting(containerEl)
+            .setName('Navigation header')
+            .setHeading();
+
+        new Setting(containerEl)
+            .setName('Show default view button')
+            .setDesc('Display the home button in the file explorer header for switching to the unfiltered default view.')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.showDefaultBtn)
+                .onChange((value) => {
+                    this.plugin.settings.showDefaultBtn = value;
+                    void this.plugin.saveSettings().then(() => {
+                        this.plugin.renderNavButtons();
+                    });
+                }));
+
+        new Setting(containerEl)
+            .setName('Show space buttons')
+            .setDesc('Display navigation buttons for all created custom spaces in the file explorer header.')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.showSpacesBtns)
+                .onChange((value) => {
+                    this.plugin.settings.showSpacesBtns = value;
+                    void this.plugin.saveSettings().then(() => {
+                        this.plugin.renderNavButtons();
+                    });
+                }));
+
+        new Setting(containerEl)
+            .setName('Center navigation buttons')
+            .setDesc('When enabled, buttons inside the file explorer header will use Obsidian default centered alignments. When turned off (default), they align cleanly to the left.')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.centerNavButtons)
+                .onChange((value) => {
+                    this.plugin.settings.centerNavButtons = value;
+                    void this.plugin.saveSettings().then(() => {
+                        this.plugin.renderNavButtons();
+                    });
+                }));
+
+        new Setting(containerEl)
+            .setName('Show "+" button on hover only')
+            .setDesc('Only display the "+" (add space) button when hovering over the navigation buttons header.')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.showPlusBtnOnHoverOnly)
+                .onChange((value) => {
+                    this.plugin.settings.showPlusBtnOnHoverOnly = value;
+                    void this.plugin.saveSettings().then(() => {
+                        this.plugin.renderNavButtons();
+                        this.plugin.applyExplorerFilterState();
+                    });
+                }));
+
+        new Setting(containerEl)
+            .setName('Hide "+" button completely')
+            .setDesc('Completely hide the "+" (add space) button from the navigation header.')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.hidePlusBtnCompletely)
+                .onChange((value) => {
+                    this.plugin.settings.hidePlusBtnCompletely = value;
+                    void this.plugin.saveSettings().then(() => {
+                        this.plugin.renderNavButtons();
+                    });
+                }));
+
+        new Setting(containerEl)
             .setName('Default view')
             .setHeading();
 
@@ -144,41 +213,8 @@ export class MySpacesSettingTab extends SafeSettingTab {
             }));
 
         new Setting(containerEl)
-            .setName('Center navigation buttons')
-            .setDesc('When enabled, buttons inside the file explorer header will use Obsidian default centered alignments. When turned off (default), they align cleanly to the left.')
-            .addToggle(toggle => toggle
-                .setValue(this.plugin.settings.centerNavButtons)
-                .onChange((value) => {
-                    this.plugin.settings.centerNavButtons = value;
-                    void this.plugin.saveSettings().then(() => {
-                        this.plugin.renderNavButtons();
-                    });
-                }));
-
-        new Setting(containerEl)
-            .setName('Show "+" button on hover only')
-            .setDesc('Only display the "+" (add space) button when hovering over the navigation buttons header.')
-            .addToggle(toggle => toggle
-                .setValue(this.plugin.settings.showPlusBtnOnHoverOnly)
-                .onChange((value) => {
-                    this.plugin.settings.showPlusBtnOnHoverOnly = value;
-                    void this.plugin.saveSettings().then(() => {
-                        this.plugin.renderNavButtons();
-                        this.plugin.applyExplorerFilterState();
-                    });
-                }));
-
-        new Setting(containerEl)
-            .setName('Hide "+" button completely')
-            .setDesc('Completely hide the "+" (add space) button from the navigation header.')
-            .addToggle(toggle => toggle
-                .setValue(this.plugin.settings.hidePlusBtnCompletely)
-                .onChange((value) => {
-                    this.plugin.settings.hidePlusBtnCompletely = value;
-                    void this.plugin.saveSettings().then(() => {
-                        this.plugin.renderNavButtons();
-                    });
-                }));
+            .setName('Space creation')
+            .setHeading();
 
         new Setting(containerEl)
             .setName('Use default space name')

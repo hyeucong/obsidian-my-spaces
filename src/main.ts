@@ -26,7 +26,7 @@ import {
 } from './commands';
 
 export default class MySpacesPlugin extends Plugin {
-    settings!: MySpacesSettings & { showDefaultBtn?: boolean };
+    settings!: MySpacesSettings;
     private isReady: boolean = false;
     private isUnloaded: boolean = false;
     private statusBarEl: HTMLElement | null = null;
@@ -349,73 +349,97 @@ export default class MySpacesPlugin extends Plugin {
 
             container.querySelectorAll('.spaces-custom-btn').forEach(el => el.remove());
 
-            if (this.settings.showDefaultBtn !== false) {
+            if (this.settings.showDefaultBtn) {
                 const defaultBtn = container.createDiv({ cls: ['clickable-icon', 'nav-action-button', 'spaces-custom-btn'] });
-                defaultBtn.setAttribute('aria-label', 'Default view');
-                setIcon(defaultBtn, 'home');
+                defaultBtn.setAttribute('aria-label', this.settings.defaultStatusBarName || 'Default view');
+
+                setIcon(defaultBtn, this.settings.defaultSpaceIcon || 'home');
 
                 if (this.settings.activeSpaceId === 'default') {
                     defaultBtn.addClass('is-active');
                 }
                 defaultBtn.addEventListener('click', () => { void this.setActiveSpace('default'); });
-            }
 
-            this.settings.spaces.forEach(space => {
-                const spaceBtn = container.createDiv({ cls: ['clickable-icon', 'nav-action-button', 'spaces-custom-btn'] });
-                spaceBtn.setAttribute('aria-label', space.name);
-                setIcon(spaceBtn, space.icon);
-
-                if (this.settings.activeSpaceId === space.id) {
-                    spaceBtn.addClass('is-active');
-                }
-
-                spaceBtn.addEventListener('click', () => { void this.setActiveSpace(space.id); });
-
-                spaceBtn.addEventListener('contextmenu', (e: MouseEvent) => {
+                defaultBtn.addEventListener('contextmenu', (e: MouseEvent) => {
                     e.preventDefault();
                     const menu = new Menu();
-
-                    menu.addItem((item: MenuItem) => {
-                        item.setTitle('Rename space')
-                            .setIcon('type')
-                            .onClick(() => {
-                                new SpaceRenameModal(this.app, this, space, (newName) => {
-                                    space.name = newName;
-                                    void this.saveSettings().then(() => {
-                                        this.registerSingleSpaceCommand(space);
-                                        this.renderNavButtons();
-                                        this.updateStatusBar();
-                                        this.showNotice(`Renamed space to "${newName}"`);
-                                    });
-                                }).open();
-                            });
-                    });
 
                     menu.addItem((item: MenuItem) => {
                         item.setTitle('Change icon')
                             .setIcon('pencil')
                             .onClick(() => {
                                 new IconSuggestModal(this.app, (chosenIcon) => {
-                                    space.icon = chosenIcon;
+                                    this.settings.defaultSpaceIcon = chosenIcon;
                                     void this.saveSettings().then(() => {
                                         this.renderNavButtons();
-                                        this.showNotice(`Updated icon for "${space.name}" to "${chosenIcon}"`);
+                                        this.showNotice(`Updated home button icon to "${chosenIcon}"`);
                                     });
                                 }).open();
                             });
                     });
 
-                    menu.addItem((item: MenuItem) => {
-                        item.setTitle(`Delete "${space.name}"`)
-                            .setIcon('trash')
-                            .onClick(() => {
-                                void this.deleteSpace(space.id);
-                            });
-                    });
-
                     menu.showAtPosition({ x: e.clientX, y: e.clientY });
                 });
-            });
+            }
+
+            if (this.settings.showSpacesBtns) {
+                this.settings.spaces.forEach(space => {
+                    const spaceBtn = container.createDiv({ cls: ['clickable-icon', 'nav-action-button', 'spaces-custom-btn'] });
+                    spaceBtn.setAttribute('aria-label', space.name);
+                    setIcon(spaceBtn, space.icon);
+
+                    if (this.settings.activeSpaceId === space.id) {
+                        spaceBtn.addClass('is-active');
+                    }
+
+                    spaceBtn.addEventListener('click', () => { void this.setActiveSpace(space.id); });
+
+                    spaceBtn.addEventListener('contextmenu', (e: MouseEvent) => {
+                        e.preventDefault();
+                        const menu = new Menu();
+
+                        menu.addItem((item: MenuItem) => {
+                            item.setTitle('Rename space')
+                                .setIcon('type')
+                                .onClick(() => {
+                                    new SpaceRenameModal(this.app, this, space, (newName) => {
+                                        space.name = newName;
+                                        void this.saveSettings().then(() => {
+                                            this.registerSingleSpaceCommand(space);
+                                            this.renderNavButtons();
+                                            this.updateStatusBar();
+                                            this.showNotice(`Renamed space to "${newName}"`);
+                                        });
+                                    }).open();
+                                });
+                        });
+
+                        menu.addItem((item: MenuItem) => {
+                            item.setTitle('Change icon')
+                                .setIcon('pencil')
+                                .onClick(() => {
+                                    new IconSuggestModal(this.app, (chosenIcon) => {
+                                        space.icon = chosenIcon;
+                                        void this.saveSettings().then(() => {
+                                            this.renderNavButtons();
+                                            this.showNotice(`Updated icon for "${space.name}" to "${chosenIcon}"`);
+                                        });
+                                    }).open();
+                                });
+                        });
+
+                        menu.addItem((item: MenuItem) => {
+                            item.setTitle(`Delete "${space.name}"`)
+                                .setIcon('trash')
+                                .onClick(() => {
+                                    void this.deleteSpace(space.id);
+                                });
+                        });
+
+                        menu.showAtPosition({ x: e.clientX, y: e.clientY });
+                    });
+                });
+            }
 
             if (!this.settings.hidePlusBtnCompletely) {
                 const plusBtn = container.createDiv({ cls: ['clickable-icon', 'nav-action-button', 'spaces-custom-btn'] });
@@ -551,6 +575,9 @@ export default class MySpacesPlugin extends Plugin {
         }
         if (this.settings.showDefaultBtn === undefined) {
             this.settings.showDefaultBtn = true;
+        }
+        if (this.settings.showSpacesBtns === undefined) {
+            this.settings.showSpacesBtns = true;
         }
         if (this.settings.centerNavButtons === undefined) {
             this.settings.centerNavButtons = false;

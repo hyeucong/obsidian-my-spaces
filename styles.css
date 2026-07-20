@@ -61,10 +61,6 @@
 }
 
 /* Navigation Button Layouts */
-.nav-buttons-container.spaces-center-nav {
-    justify-content: center;
-}
-
 .nav-buttons-container.spaces-left-nav {
     justify-content: flex-start;
 }
