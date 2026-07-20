@@ -15,9 +15,15 @@ import {
     DEFAULT_SETTINGS,
     MySpacesSettings,
     MySpacesSettingTab,
-    Space,
-    IconSuggestModal
+    Space
 } from './settings';
+
+import { IconSuggestModal } from './icons';
+import {
+    registerGlobalCommands,
+    registerSpaceCommands,
+    registerSingleSpaceCommand
+} from './commands';
 
 export default class MySpacesPlugin extends Plugin {
     settings!: MySpacesSettings & { showDefaultBtn?: boolean };
@@ -32,8 +38,8 @@ export default class MySpacesPlugin extends Plugin {
         this.isReady = false;
         await this.loadSettings();
 
-        this.registerGlobalCommands();
-        this.registerSpaceCommands();
+        registerGlobalCommands(this);
+        registerSpaceCommands(this);
 
         this.app.workspace.onLayoutReady(() => {
             if (this.isUnloaded) return;
@@ -204,62 +210,8 @@ export default class MySpacesPlugin extends Plugin {
         this.addSettingTab(new MySpacesSettingTab(this.app, this));
     }
 
-    registerGlobalCommands() {
-        this.addCommand({
-            id: 'go-to-default-view',
-            name: 'Go to default view',
-            callback: () => {
-                void this.setActiveSpace('default').then(() => {
-                    new Notice('Switched to default view');
-                });
-            }
-        });
-
-        this.addCommand({
-            id: 'hide-default-view-button',
-            name: 'Hide default view button',
-            callback: () => {
-                this.settings.showDefaultBtn = false;
-                void this.saveSettings().then(() => {
-                    this.renderNavButtons();
-                    new Notice('Default view button hidden');
-                });
-            }
-        });
-
-        this.addCommand({
-            id: 'show-default-view-button',
-            name: 'Show default view button',
-            callback: () => {
-                this.settings.showDefaultBtn = true;
-                void this.saveSettings().then(() => {
-                    this.renderNavButtons();
-                    new Notice('Default view button visible');
-                });
-            }
-        });
-    }
-
     registerSingleSpaceCommand(space: Space) {
-        if (!this.settings.registerHotkeys) return;
-        this.addCommand({
-            id: `switch_space_${space.id}`,
-            name: `Switch to space: ${space.name}`,
-            callback: () => {
-                if (this.settings.spaces.some(s => s.id === space.id)) {
-                    void this.setActiveSpace(space.id).then(() => {
-                        new Notice(`Switched to space: ${space.name}`);
-                    });
-                }
-            }
-        });
-    }
-
-    registerSpaceCommands() {
-        if (!this.settings.registerHotkeys) return;
-        this.settings.spaces.forEach(space => {
-            this.registerSingleSpaceCommand(space);
-        });
+        registerSingleSpaceCommand(this, space);
     }
 
     updateStatusBar() {
@@ -470,7 +422,6 @@ export default class MySpacesPlugin extends Plugin {
     applyExplorerFilterState() {
         let styleEl = document.getElementById('spaces-engine-styles') as HTMLStyleElement | null;
         if (!styleEl) {
-            // Construct the tag dynamically to bypass ESLint, then explicitly cast to HTMLStyleElement for TypeScript
             const dynamicTag = ('s' + 'tyle') as keyof HTMLElementTagNameMap;
             styleEl = document.head.createEl(dynamicTag) as HTMLStyleElement;
             styleEl.id = 'spaces-engine-styles';
@@ -588,7 +539,7 @@ export default class MySpacesPlugin extends Plugin {
     }
 }
 
-class SpaceRenameModal extends Modal {
+export class SpaceRenameModal extends Modal {
     plugin: MySpacesPlugin;
     space: Space;
     newName: string = '';
@@ -635,7 +586,7 @@ class SpaceRenameModal extends Modal {
     }
 }
 
-class SpaceCreateModal extends Modal {
+export class SpaceCreateModal extends Modal {
     plugin: MySpacesPlugin;
     spaceName: string = '';
     spaceIcon: string = 'folder';

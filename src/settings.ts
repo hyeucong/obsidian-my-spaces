@@ -1,6 +1,7 @@
-import { App, Setting, ButtonComponent, Notice, SuggestModal, setIcon, TextComponent } from 'obsidian';
+import { App, Setting, ButtonComponent, Notice, setIcon, TextComponent } from 'obsidian';
 import * as obsidian from 'obsidian';
 import MySpacesPlugin from './main';
+import { IconSuggestModal } from './icons';
 
 export interface Space {
     id: string;
@@ -40,16 +41,6 @@ export const DEFAULT_SETTINGS: MySpacesSettings = {
     centerNavButtons: false
 };
 
-export const POPULAR_ICONS = [
-    'folder', 'folder-heart', 'folder-open', 'home', 'star', 'heart', 'list', 'check-square',
-    'bookmark', 'calendar', 'user', 'settings', 'file-text', 'tag', 'hash', 'pin', 'map-pin',
-    'compass', 'search', 'bell', 'archive', 'trash', 'lock', 'key', 'link', 'image', 'code',
-    'terminal', 'database', 'coffee', 'book', 'book-open', 'pen', 'pencil', 'wrench', 'hammer',
-    'zap', 'smile', 'gift', 'crown', 'trophy', 'target', 'flag', 'sun', 'moon', 'cloud',
-    'shield', 'info', 'help-circle', 'alert-triangle', 'layers', 'layout', 'box', 'briefcase',
-    'graduation-cap', 'clover', 'flame', 'lightbulb', 'globe', 'heart-handshake', 'hourglass'
-];
-
 // Creates a clean type mask that strips out the upstream @deprecated flag from the display method
 const SafeSettingTab = obsidian.PluginSettingTab as unknown as new (
     app: App,
@@ -68,12 +59,10 @@ export class MySpacesSettingTab extends SafeSettingTab {
         this.plugin = plugin;
     }
 
-    // Explicitly satisfies structural checks for legacy Obsidian environment deployments
     display(): void {
         this.renderSettingsTab();
     }
 
-    // Isolated render implementation safe from method override warnings
     renderSettingsTab(): void {
         const { containerEl } = this;
         containerEl.empty();
@@ -305,7 +294,6 @@ export class MySpacesSettingTab extends SafeSettingTab {
                 btn.setIcon('trash')
                     .setTooltip(`Delete "${space.name}"`);
 
-                // Style the button as destructive natively. No setWarning, no crashes.
                 btn.buttonEl.classList.add('mod-warning');
 
                 btn.onClick(() => {
@@ -407,34 +395,5 @@ export class MySpacesSettingTab extends SafeSettingTab {
                     });
                 });
         });
-    }
-}
-
-export class IconSuggestModal extends SuggestModal<string> {
-    onSelect: (icon: string) => void;
-
-    constructor(app: App, onSelect: (icon: string) => void) {
-        super(app);
-        this.onSelect = onSelect;
-        this.setPlaceholder('Search workspace icons...');
-    }
-
-    getSuggestions(query: string): string[] {
-        return POPULAR_ICONS.filter(icon =>
-            icon.toLowerCase().includes(query.toLowerCase())
-        );
-    }
-
-    renderSuggestion(value: string, el: HTMLElement) {
-        el.addClass('spaces-icon-suggestion');
-
-        const iconContainer = el.createDiv();
-        setIcon(iconContainer, value);
-
-        el.createSpan({ text: value });
-    }
-
-    onChooseSuggestion(item: string, evt: MouseEvent | KeyboardEvent) {
-        this.onSelect(item);
     }
 }
