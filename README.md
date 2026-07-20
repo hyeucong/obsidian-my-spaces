@@ -24,3 +24,4 @@ If you find a bug or would like to suggest an improvement, please open an issue 
 - [ ] Add more command
 - [ ] Cover more sidebar state/case if had any
 - [ ] Few more setting option
+- [ ] Improve space icons pool
