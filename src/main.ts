@@ -33,6 +33,15 @@ export default class MySpacesPlugin extends Plugin {
 
     private saveQueue: Promise<void> = Promise.resolve();
 
+    /**
+     * Display a popup notice if notifications are enabled in plugin settings.
+     */
+    showNotice(message: string) {
+        if (this.settings.showNotifications) {
+            new Notice(message);
+        }
+    }
+
     async onload() {
         this.isUnloaded = false;
         this.isReady = false;
@@ -255,7 +264,7 @@ export default class MySpacesPlugin extends Plugin {
         }
 
         await this.saveSettings();
-        new Notice(`Added to "${space.name}"`);
+        this.showNotice(`Added to "${space.name}"`);
 
         if (this.settings.activeSpaceId === spaceId) {
             this.applyExplorerFilterState();
@@ -277,7 +286,7 @@ export default class MySpacesPlugin extends Plugin {
         }
 
         await this.saveSettings();
-        new Notice(`Removed from "${space.name}"`);
+        this.showNotice(`Removed from "${space.name}"`);
 
         if (this.settings.activeSpaceId === spaceId) {
             this.applyExplorerFilterState();
@@ -298,7 +307,7 @@ export default class MySpacesPlugin extends Plugin {
         this.renderNavButtons();
         this.applyExplorerFilterState();
         this.updateStatusBar();
-        new Notice(`Deleted space "${space.name}"`);
+        this.showNotice(`Deleted space "${space.name}"`);
     }
 
     async createNewSpace(name: string, icon: string) {
@@ -373,9 +382,10 @@ export default class MySpacesPlugin extends Plugin {
                                 new SpaceRenameModal(this.app, this, space, (newName) => {
                                     space.name = newName;
                                     void this.saveSettings().then(() => {
+                                        this.registerSingleSpaceCommand(space);
                                         this.renderNavButtons();
                                         this.updateStatusBar();
-                                        new Notice(`Renamed space to "${newName}"`);
+                                        this.showNotice(`Renamed space to "${newName}"`);
                                     });
                                 }).open();
                             });
@@ -389,7 +399,7 @@ export default class MySpacesPlugin extends Plugin {
                                     space.icon = chosenIcon;
                                     void this.saveSettings().then(() => {
                                         this.renderNavButtons();
-                                        new Notice(`Updated icon for "${space.name}" to "${chosenIcon}"`);
+                                        this.showNotice(`Updated icon for "${space.name}" to "${chosenIcon}"`);
                                     });
                                 }).open();
                             });
@@ -407,15 +417,21 @@ export default class MySpacesPlugin extends Plugin {
                 });
             });
 
-            const plusBtn = container.createDiv({ cls: ['clickable-icon', 'nav-action-button', 'spaces-custom-btn'] });
-            plusBtn.setAttribute('aria-label', 'Add space');
-            setIcon(plusBtn, 'plus');
+            if (!this.settings.hidePlusBtnCompletely) {
+                const plusBtn = container.createDiv({ cls: ['clickable-icon', 'nav-action-button', 'spaces-custom-btn'] });
+                plusBtn.setAttribute('aria-label', 'Add space');
+                setIcon(plusBtn, 'plus');
 
-            plusBtn.addEventListener('click', () => {
-                new SpaceCreateModal(this.app, this, (name, icon) => {
-                    void this.createNewSpace(name, icon);
-                }).open();
-            });
+                if (this.settings.showPlusBtnOnHoverOnly) {
+                    plusBtn.addClass('spaces-plus-hover-only');
+                }
+
+                plusBtn.addEventListener('click', () => {
+                    new SpaceCreateModal(this.app, this, (name, icon) => {
+                        void this.createNewSpace(name, icon);
+                    }).open();
+                });
+            }
         });
     }
 
@@ -429,8 +445,24 @@ export default class MySpacesPlugin extends Plugin {
 
         const leaves = this.app.workspace.getLeavesOfType('file-explorer');
 
+        let css = `
+            .nav-buttons-container .spaces-custom-btn.is-active {
+                background-color: var(--background-modifier-hover) !important;
+                opacity: 1 !important;
+            }
+            .spaces-plus-hover-only {
+                opacity: 0 !important;
+                pointer-events: none;
+                transition: opacity 0.15s ease-in-out;
+            }
+            .nav-buttons-container:hover .spaces-plus-hover-only {
+                opacity: 1 !important;
+                pointer-events: auto;
+            }
+        `;
+
         if (this.settings.activeSpaceId === 'default') {
-            styleEl.textContent = '';
+            styleEl.textContent = css;
             leaves.forEach(leaf => {
                 const fileExplorer = leaf.view.containerEl.querySelector('.nav-files-container');
                 if (fileExplorer) fileExplorer.removeClass('spaces-filter-active');
@@ -446,11 +478,7 @@ export default class MySpacesPlugin extends Plugin {
         const activeSpace = this.settings.spaces.find(s => s.id === this.settings.activeSpaceId);
         if (!activeSpace) return;
 
-        let css = `
-            .nav-buttons-container .spaces-custom-btn.is-active {
-                background-color: var(--background-modifier-hover) !important;
-                opacity: 1 !important;
-            }
+        css += `
             .spaces-filter-active .tree-item { 
                 display: none !important; 
             }
@@ -518,11 +546,20 @@ export default class MySpacesPlugin extends Plugin {
         const loadedData = (await this.loadData()) as Partial<MySpacesSettings>;
         this.settings = Object.assign({}, DEFAULT_SETTINGS, loadedData || {});
 
+        if (this.settings.showNotifications === undefined) {
+            this.settings.showNotifications = true;
+        }
         if (this.settings.showDefaultBtn === undefined) {
             this.settings.showDefaultBtn = true;
         }
         if (this.settings.centerNavButtons === undefined) {
             this.settings.centerNavButtons = false;
+        }
+        if (this.settings.hidePlusBtnCompletely === undefined) {
+            this.settings.hidePlusBtnCompletely = false;
+        }
+        if (this.settings.showPlusBtnOnHoverOnly === undefined) {
+            this.settings.showPlusBtnOnHoverOnly = false;
         }
         if (this.settings.spaces) {
             this.settings.spaces.forEach(space => {

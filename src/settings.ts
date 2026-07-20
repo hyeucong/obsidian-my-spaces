@@ -2,6 +2,7 @@ import { App, Setting, ButtonComponent, Notice, setIcon, TextComponent } from 'o
 import * as obsidian from 'obsidian';
 import MySpacesPlugin from './main';
 import { IconSuggestModal } from './icons';
+import { registerSpaceCommands, registerSingleSpaceCommand } from './commands';
 
 export interface Space {
     id: string;
@@ -17,6 +18,7 @@ export interface MySpacesSettings {
     useDefaultName: boolean;
     defaultSpaceName: string;
     registerHotkeys: boolean;
+    showNotifications: boolean;
     showStatusBar: boolean;
     useStatusBarPrefix: boolean;
     statusBarPrefix: string;
@@ -24,6 +26,8 @@ export interface MySpacesSettings {
     defaultSpaceIcon: string;
     autoTrackNewItems: boolean;
     centerNavButtons: boolean;
+    hidePlusBtnCompletely: boolean;
+    showPlusBtnOnHoverOnly: boolean;
 }
 
 export const DEFAULT_SETTINGS: MySpacesSettings = {
@@ -32,16 +36,18 @@ export const DEFAULT_SETTINGS: MySpacesSettings = {
     useDefaultName: false,
     defaultSpaceName: 'Untitled Space',
     registerHotkeys: false,
+    showNotifications: true,
     showStatusBar: false,
     useStatusBarPrefix: false,
     statusBarPrefix: 'Space: ',
     defaultStatusBarName: 'Default',
     defaultSpaceIcon: 'home',
     autoTrackNewItems: true,
-    centerNavButtons: false
+    centerNavButtons: false,
+    hidePlusBtnCompletely: false,
+    showPlusBtnOnHoverOnly: false
 };
 
-// Creates a clean type mask that strips out the upstream @deprecated flag from the display method
 const SafeSettingTab = obsidian.PluginSettingTab as unknown as new (
     app: App,
     plugin: MySpacesPlugin
@@ -89,6 +95,16 @@ export class MySpacesSettingTab extends SafeSettingTab {
                 }));
 
         new Setting(containerEl)
+            .setName('Enable notifications')
+            .setDesc('Display popup notices when switching, creating, renaming, or deleting spaces.')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.showNotifications)
+                .onChange((value) => {
+                    this.plugin.settings.showNotifications = value;
+                    void this.plugin.saveSettings();
+                }));
+
+        new Setting(containerEl)
             .setName('Default view')
             .setHeading();
 
@@ -122,7 +138,7 @@ export class MySpacesSettingTab extends SafeSettingTab {
                         this.plugin.renderNavButtons();
                         defaultPreviewContainer.empty();
                         setIcon(defaultPreviewContainer, chosenIcon);
-                        new Notice(`Updated home button icon asset to "${chosenIcon}"`);
+                        this.plugin.showNotice(`Updated home button icon asset to "${chosenIcon}"`);
                     });
                 }).open();
             }));
@@ -134,6 +150,31 @@ export class MySpacesSettingTab extends SafeSettingTab {
                 .setValue(this.plugin.settings.centerNavButtons)
                 .onChange((value) => {
                     this.plugin.settings.centerNavButtons = value;
+                    void this.plugin.saveSettings().then(() => {
+                        this.plugin.renderNavButtons();
+                    });
+                }));
+
+        new Setting(containerEl)
+            .setName('Show "+" button on hover only')
+            .setDesc('Only display the "+" (add space) button when hovering over the navigation buttons header.')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.showPlusBtnOnHoverOnly)
+                .onChange((value) => {
+                    this.plugin.settings.showPlusBtnOnHoverOnly = value;
+                    void this.plugin.saveSettings().then(() => {
+                        this.plugin.renderNavButtons();
+                        this.plugin.applyExplorerFilterState();
+                    });
+                }));
+
+        new Setting(containerEl)
+            .setName('Hide "+" button completely')
+            .setDesc('Completely hide the "+" (add space) button from the navigation header.')
+            .addToggle(toggle => toggle
+                .setValue(this.plugin.settings.hidePlusBtnCompletely)
+                .onChange((value) => {
+                    this.plugin.settings.hidePlusBtnCompletely = value;
                     void this.plugin.saveSettings().then(() => {
                         this.plugin.renderNavButtons();
                     });
@@ -162,12 +203,14 @@ export class MySpacesSettingTab extends SafeSettingTab {
 
         new Setting(containerEl)
             .setName('Register space hotkeys')
-            .setDesc('Dynamically generate an individual command entry for every space created. Allows setting custom hotkeys via Obsidian options -> hotkeys. Requires application reload on initial creation.')
+            .setDesc('Dynamically generate an individual command entry for every space created. Allows setting custom hotkeys via Obsidian options -> hotkeys.')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.registerHotkeys)
                 .onChange((value) => {
                     this.plugin.settings.registerHotkeys = value;
-                    void this.plugin.saveSettings();
+                    void this.plugin.saveSettings().then(() => {
+                        registerSpaceCommands(this.plugin);
+                    });
                 }));
 
         new Setting(containerEl)
@@ -242,9 +285,10 @@ export class MySpacesSettingTab extends SafeSettingTab {
                     if (newName && newName !== space.name) {
                         space.name = newName;
                         void this.plugin.saveSettings().then(() => {
+                            registerSingleSpaceCommand(this.plugin, space);
                             this.plugin.renderNavButtons();
                             this.plugin.updateStatusBar();
-                            new Notice(`Renamed space to "${newName}"`);
+                            this.plugin.showNotice(`Renamed space to "${newName}"`);
                         });
                     } else if (!newName) {
                         text.setValue(space.name);
@@ -267,7 +311,7 @@ export class MySpacesSettingTab extends SafeSettingTab {
                         space.icon = newIcon;
                         void this.plugin.saveSettings().then(() => {
                             this.plugin.renderNavButtons();
-                            new Notice(`Updated icon for "${space.name}"`);
+                            this.plugin.showNotice(`Updated icon for "${space.name}"`);
                         });
                     } else if (!newIcon) {
                         text.setValue(space.icon);
@@ -284,7 +328,7 @@ export class MySpacesSettingTab extends SafeSettingTab {
                             if (iconInputRef) iconInputRef.setValue(chosenIcon);
                             void this.plugin.saveSettings().then(() => {
                                 this.plugin.renderNavButtons();
-                                new Notice(`Updated icon to "${chosenIcon}"`);
+                                this.plugin.showNotice(`Updated icon to "${chosenIcon}"`);
                             });
                         }).open();
                     });
@@ -305,7 +349,7 @@ export class MySpacesSettingTab extends SafeSettingTab {
                         this.plugin.renderNavButtons();
                         this.plugin.applyExplorerFilterState();
                         this.plugin.updateStatusBar();
-                        new Notice(`Deleted space "${space.name}"`);
+                        this.plugin.showNotice(`Deleted space "${space.name}"`);
                         this.renderSettingsTab();
                     });
                 });
@@ -385,7 +429,7 @@ export class MySpacesSettingTab extends SafeSettingTab {
                     void this.plugin.saveSettings().then(() => {
                         this.plugin.renderNavButtons();
                         this.plugin.applyExplorerFilterState();
-                        new Notice(`Created new space "${newSpace.name}"`);
+                        this.plugin.showNotice(`Created new space "${newSpace.name}"`);
 
                         this.newSpaceId = '';
                         this.newSpaceName = '';

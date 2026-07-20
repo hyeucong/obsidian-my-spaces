@@ -1,4 +1,3 @@
-import { Notice } from 'obsidian';
 import MySpacesPlugin, { SpaceCreateModal } from './main';
 import { Space } from './settings';
 
@@ -12,12 +11,12 @@ export function registerGlobalCommands(plugin: MySpacesPlugin) {
         name: 'Go to default view',
         callback: () => {
             void plugin.setActiveSpace('default').then(() => {
-                new Notice('Switched to default view');
+                plugin.showNotice('Switched to default view');
             });
         }
     });
 
-    // NEW: Command to trigger the Add Space modal
+    // Command to trigger the Add space modal
     plugin.addCommand({
         id: 'open-add-space-modal',
         name: 'Add new space',
@@ -36,7 +35,7 @@ export function registerGlobalCommands(plugin: MySpacesPlugin) {
             plugin.settings.showDefaultBtn = false;
             void plugin.saveSettings().then(() => {
                 plugin.renderNavButtons();
-                new Notice('Default view button hidden');
+                plugin.showNotice('Default view button hidden');
             });
         }
     });
@@ -49,26 +48,31 @@ export function registerGlobalCommands(plugin: MySpacesPlugin) {
             plugin.settings.showDefaultBtn = true;
             void plugin.saveSettings().then(() => {
                 plugin.renderNavButtons();
-                new Notice('Default view button visible');
+                plugin.showNotice('Default view button visible');
             });
         }
     });
 }
 
 /**
- * Registers an individual hotkey command for a single space.
+ * Registers an individual hotkey command for a single space using checkCallback.
  */
 export function registerSingleSpaceCommand(plugin: MySpacesPlugin, space: Space) {
-    if (!plugin.settings.registerHotkeys) return;
     plugin.addCommand({
         id: `switch_space_${space.id}`,
         name: `Switch to space: ${space.name}`,
-        callback: () => {
-            if (plugin.settings.spaces.some(s => s.id === space.id)) {
+        checkCallback: (checking: boolean) => {
+            if (!plugin.settings.registerHotkeys) return false;
+
+            const spaceExists = plugin.settings.spaces.some(s => s.id === space.id);
+            if (!spaceExists) return false;
+
+            if (!checking) {
                 void plugin.setActiveSpace(space.id).then(() => {
-                    new Notice(`Switched to space: ${space.name}`);
+                    plugin.showNotice(`Switched to space: ${space.name}`);
                 });
             }
+            return true;
         }
     });
 }
@@ -77,7 +81,6 @@ export function registerSingleSpaceCommand(plugin: MySpacesPlugin, space: Space)
  * Registers commands for all configured spaces.
  */
 export function registerSpaceCommands(plugin: MySpacesPlugin) {
-    if (!plugin.settings.registerHotkeys) return;
     plugin.settings.spaces.forEach(space => {
         registerSingleSpaceCommand(plugin, space);
     });
