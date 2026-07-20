@@ -64,10 +64,14 @@ export class IconSuggestModal extends SuggestModal<string[]> {
     private getIconNode(iconName: string): HTMLDivElement {
         let template = ICON_TEMPLATE_CACHE.get(iconName);
         if (!template) {
-            template = document.createElement('div');
-            template.className = 'spaces-icon-grid-item';
-            template.setAttribute('aria-label', iconName);
-            template.setAttribute('data-icon', iconName);
+            // Replaced document.createElement with Obsidian's native createDiv helper
+            template = createDiv({
+                cls: 'spaces-icon-grid-item',
+                attr: {
+                    'aria-label': iconName,
+                    'data-icon': iconName
+                }
+            });
             setIcon(template, iconName);
             ICON_TEMPLATE_CACHE.set(iconName, template);
         }
