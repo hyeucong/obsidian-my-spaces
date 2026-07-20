@@ -59,12 +59,11 @@ export class IconSuggestModal extends SuggestModal<string[]> {
     }
 
     /**
-     * Lazy-parses SVG once, then uses native cloneNode(true) for ultra-fast rendering.
+     * Lazy-parses SVG once into memory, then uses native cloneNode(true) for fast rendering.
      */
     private getIconNode(iconName: string): HTMLDivElement {
         let template = ICON_TEMPLATE_CACHE.get(iconName);
         if (!template) {
-            // Replaced document.createElement with Obsidian's native createDiv helper
             template = createDiv({
                 cls: 'spaces-icon-grid-item',
                 attr: {
@@ -105,8 +104,8 @@ export class IconSuggestModal extends SuggestModal<string[]> {
             el.appendChild(this.getIconNode(iconName));
         });
 
-        // 2. Event Delegation: 1 listener per row instead of 12 listeners per item
-        el.onclick = (e: MouseEvent) => {
+        // 2. Event Delegation using standard addEventListener
+        el.addEventListener('click', (e: MouseEvent) => {
             const target = (e.target as HTMLElement).closest('.spaces-icon-grid-item');
             if (target) {
                 const iconName = target.getAttribute('data-icon');
@@ -116,7 +115,7 @@ export class IconSuggestModal extends SuggestModal<string[]> {
                     this.close();
                 }
             }
-        };
+        });
     }
 
     onChooseSuggestion(item: string[], evt: MouseEvent | KeyboardEvent) {
