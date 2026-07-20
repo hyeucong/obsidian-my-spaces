@@ -7,10 +7,8 @@
 .vertical-tab-content .setting-item.space-setting-left .setting-item-control {
     display: flex;
     flex-wrap: wrap;
-    /* Fix: Forces elements to wrap cleanly instead of clipping out */
     justify-content: flex-start;
     gap: 8px 12px;
-    /* Row gap & column gap for wrapping structure */
     width: 100%;
 }
 
@@ -25,7 +23,6 @@
 
 .vertical-tab-content .setting-item.space-setting-left .space-name-input {
     flex-grow: 1;
-    /* Better responsive sizing */
     min-width: 150px;
     max-width: 220px;
 }
@@ -34,7 +31,7 @@
     width: 120px;
 }
 
-/* Fix: The stylized dark box container for empty states */
+/* Empty State Notice */
 .spaces-empty-notice {
     background-color: var(--background-secondary-alt);
     border: 1px solid var(--background-modifier-border);
@@ -46,58 +43,24 @@
     margin: 12px 0 20px 0;
 }
 
-/* Icon Preview Layouts */
-.space-icon-preview {
-    display: flex;
-    align-items: center;
-    margin-right: 12px;
-}
-
-.spaces-icon-suggestion {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 8px 12px;
-}
-
 /* Navigation Button Layouts */
 .nav-buttons-container.spaces-left-nav {
     justify-content: flex-start;
 }
 
-/* --- Full-Width Responsive Icon Grid Modal --- */
-.spaces-icon-modal .prompt-results {
-    padding: 8px 12px;
-}
-
-/* Higher specificity overrides Obsidian's default .suggestion-item styles without !important */
-.spaces-icon-modal .suggestion-item.spaces-icon-row {
-    display: grid;
-    grid-template-columns: repeat(12, 1fr);
-    justify-items: center;
+/* Classic Icon Modal List Item Styling */
+.spaces-icon-suggestion {
+    display: flex;
     align-items: center;
-    gap: 4px;
-    padding: 2px 0;
-    background-color: transparent;
+    gap: 12px;
+    padding: 6px 10px;
 }
 
-.spaces-icon-modal .suggestion-item.spaces-icon-row.is-selected {
-    background-color: transparent;
-}
-
-.spaces-icon-grid-item {
+.space-icon-preview {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 100%;
-    aspect-ratio: 1;
-    border-radius: 6px;
-    cursor: pointer;
+    width: 20px;
+    height: 20px;
     color: var(--text-muted);
-    transition: color 0.15s, background-color 0.15s;
-}
-
-.spaces-icon-grid-item:hover {
-    background-color: var(--background-modifier-hover);
-    color: var(--text-normal);
 }

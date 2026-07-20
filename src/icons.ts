@@ -1,6 +1,6 @@
 import { App, SuggestModal, setIcon, getIconIds } from 'obsidian';
 
-// Curated list of popular workspace & layout icons shown at the top
+// Curated list of popular workspace & layout icons shown at the top by default
 const POPULAR_WORKSPACE_ICONS: string[] = [
     'folder', 'layout', 'grid', 'layers', 'box', 'bookmark', 'star', 'home',
     'file-text', 'database', 'briefcase', 'compass', 'cpu', 'archive', 'tag',
@@ -13,12 +13,6 @@ const POPULAR_WORKSPACE_ICONS: string[] = [
 ];
 
 /**
- * Global persistent template cache. 
- * Icons parsed once remain in memory across modal re-opens for 0ms load times.
- */
-const ICON_TEMPLATE_CACHE: Map<string, HTMLDivElement> = new Map();
-
-/**
  * Retrieves all registered icon IDs available in Obsidian's icon registry.
  */
 export function getAllIcons(): string[] {
@@ -26,18 +20,15 @@ export function getAllIcons(): string[] {
     return Array.from(new Set(iconIds)).sort((a, b) => a.localeCompare(b));
 }
 
-export class IconSuggestModal extends SuggestModal<string[]> {
+export class IconSuggestModal extends SuggestModal<string> {
     private allIcons: string[];
     private defaultOrderedIcons: string[];
-    private iconsPerRow: number = 12;
     onSelect: (icon: string) => void;
 
     constructor(app: App, onSelect: (icon: string) => void) {
         super(app);
         this.onSelect = onSelect;
         this.setPlaceholder('Search workspace icons...');
-
-        this.modalEl.addClass('spaces-icon-modal');
 
         this.allIcons = getAllIcons();
 
@@ -55,73 +46,51 @@ export class IconSuggestModal extends SuggestModal<string[]> {
         const popularSet = new Set(resolvedPopular);
         const remainingIcons = this.allIcons.filter(icon => !popularSet.has(icon));
 
+        // Popular icons first, followed by all other available icons
         this.defaultOrderedIcons = [...resolvedPopular, ...remainingIcons];
     }
 
-    /**
-     * Lazy-parses SVG once into memory, then uses native cloneNode(true) for fast rendering.
-     */
-    private getIconNode(iconName: string): HTMLDivElement {
-        let template = ICON_TEMPLATE_CACHE.get(iconName);
-        if (!template) {
-            template = createDiv({
-                cls: 'spaces-icon-grid-item',
-                attr: {
-                    'aria-label': iconName,
-                    'data-icon': iconName
-                }
-            });
-            setIcon(template, iconName);
-            ICON_TEMPLATE_CACHE.set(iconName, template);
-        }
-        return template.cloneNode(true) as HTMLDivElement;
-    }
-
-    getSuggestions(query: string): string[][] {
+    getSuggestions(query: string): string[] {
         const lowerQuery = query.toLowerCase().trim();
-        let matchedIcons = this.defaultOrderedIcons;
 
-        if (lowerQuery) {
-            matchedIcons = this.allIcons.filter(icon =>
-                icon.toLowerCase().includes(lowerQuery)
-            );
+        // STATE 1: Empty input -> Immediately revert to popular icons list
+        if (!lowerQuery) {
+            return this.defaultOrderedIcons;
         }
 
-        const rows: string[][] = [];
-        for (let i = 0; i < matchedIcons.length; i += this.iconsPerRow) {
-            rows.push(matchedIcons.slice(i, i + this.iconsPerRow));
-        }
+        // STATE 2: Active Search -> Query full registry with smart relevance sorting
+        return this.allIcons
+            .filter(icon => icon.toLowerCase().includes(lowerQuery))
+            .sort((a, b) => {
+                const aLower = a.toLowerCase();
+                const bLower = b.toLowerCase();
 
-        return rows;
+                // Exact match first
+                if (aLower === lowerQuery) return -1;
+                if (bLower === lowerQuery) return 1;
+
+                // "Starts with" matches second
+                const aStarts = aLower.startsWith(lowerQuery);
+                const bStarts = bLower.startsWith(lowerQuery);
+                if (aStarts && !bStarts) return -1;
+                if (!aStarts && bStarts) return 1;
+
+                // Alphabetical fallback
+                return aLower.localeCompare(bLower);
+            });
     }
 
-    renderSuggestion(value: string[], el: HTMLElement) {
-        el.addClass('spaces-icon-row');
+    renderSuggestion(iconName: string, el: HTMLElement) {
         el.empty();
+        el.addClass('spaces-icon-suggestion');
 
-        // 1. Fast DOM insertion using cloned templates
-        value.forEach(iconName => {
-            el.appendChild(this.getIconNode(iconName));
-        });
+        const iconContainer = el.createDiv({ cls: 'space-icon-preview' });
+        setIcon(iconContainer, iconName);
 
-        // 2. Event Delegation using standard addEventListener
-        el.addEventListener('click', (e: MouseEvent) => {
-            const target = (e.target as HTMLElement).closest('.spaces-icon-grid-item');
-            if (target) {
-                const iconName = target.getAttribute('data-icon');
-                if (iconName) {
-                    e.stopPropagation();
-                    this.onSelect(iconName);
-                    this.close();
-                }
-            }
-        });
+        el.createSpan({ text: iconName });
     }
 
-    onChooseSuggestion(item: string[], evt: MouseEvent | KeyboardEvent) {
-        const firstIcon = item[0];
-        if (firstIcon) {
-            this.onSelect(firstIcon);
-        }
+    onChooseSuggestion(iconName: string, evt: MouseEvent | KeyboardEvent) {
+        this.onSelect(iconName);
     }
 }
