@@ -70,18 +70,19 @@
     padding: 8px 12px;
 }
 
-.spaces-icon-row {
-    display: grid !important;
+/* Higher specificity overrides Obsidian's default .suggestion-item styles without !important */
+.spaces-icon-modal .suggestion-item.spaces-icon-row {
+    display: grid;
     grid-template-columns: repeat(12, 1fr);
     justify-items: center;
     align-items: center;
     gap: 4px;
-    padding: 2px 0 !important;
-    background: transparent !important;
+    padding: 2px 0;
+    background-color: transparent;
 }
 
-.spaces-icon-row.is-selected {
-    background: transparent !important;
+.spaces-icon-modal .suggestion-item.spaces-icon-row.is-selected {
+    background-color: transparent;
 }
 
 .spaces-icon-grid-item {
