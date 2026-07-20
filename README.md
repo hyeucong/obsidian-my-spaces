@@ -19,3 +19,8 @@ If you find a bug or would like to suggest an improvement, please open an issue 
 
 ## Installation
 - Install it from the Obsidian Community Plugins browser, or Download the latest release and place the plugin files in your vault’s .obsidian/plugins/ folder.
+
+## Todo
+- [ ] Add more command
+- [ ] Cover more sidebar state/case if had any
+- [ ] Few more setting option
