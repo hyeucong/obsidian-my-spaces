@@ -13,6 +13,12 @@ const POPULAR_WORKSPACE_ICONS: string[] = [
 ];
 
 /**
+ * Global persistent template cache. 
+ * Icons parsed once remain in memory across modal re-opens for 0ms load times.
+ */
+const ICON_TEMPLATE_CACHE: Map<string, HTMLDivElement> = new Map();
+
+/**
  * Retrieves all registered icon IDs available in Obsidian's icon registry.
  */
 export function getAllIcons(): string[] {
@@ -23,7 +29,7 @@ export function getAllIcons(): string[] {
 export class IconSuggestModal extends SuggestModal<string[]> {
     private allIcons: string[];
     private defaultOrderedIcons: string[];
-    private iconsPerRow: number = 12; // <--- Changed from 7 to 12 to fill full modal width
+    private iconsPerRow: number = 12;
     onSelect: (icon: string) => void;
 
     constructor(app: App, onSelect: (icon: string) => void) {
@@ -52,6 +58,22 @@ export class IconSuggestModal extends SuggestModal<string[]> {
         this.defaultOrderedIcons = [...resolvedPopular, ...remainingIcons];
     }
 
+    /**
+     * Lazy-parses SVG once, then uses native cloneNode(true) for ultra-fast rendering.
+     */
+    private getIconNode(iconName: string): HTMLDivElement {
+        let template = ICON_TEMPLATE_CACHE.get(iconName);
+        if (!template) {
+            template = document.createElement('div');
+            template.className = 'spaces-icon-grid-item';
+            template.setAttribute('aria-label', iconName);
+            template.setAttribute('data-icon', iconName);
+            setIcon(template, iconName);
+            ICON_TEMPLATE_CACHE.set(iconName, template);
+        }
+        return template.cloneNode(true) as HTMLDivElement;
+    }
+
     getSuggestions(query: string): string[][] {
         const lowerQuery = query.toLowerCase().trim();
         let matchedIcons = this.defaultOrderedIcons;
@@ -74,18 +96,23 @@ export class IconSuggestModal extends SuggestModal<string[]> {
         el.addClass('spaces-icon-row');
         el.empty();
 
+        // 1. Fast DOM insertion using cloned templates
         value.forEach(iconName => {
-            const iconContainer = el.createDiv({ cls: 'spaces-icon-grid-item' });
-            setIcon(iconContainer, iconName);
-
-            iconContainer.setAttribute('aria-label', iconName);
-
-            iconContainer.addEventListener('click', (e: MouseEvent) => {
-                e.stopPropagation();
-                this.onSelect(iconName);
-                this.close();
-            });
+            el.appendChild(this.getIconNode(iconName));
         });
+
+        // 2. Event Delegation: 1 listener per row instead of 12 listeners per item
+        el.onclick = (e: MouseEvent) => {
+            const target = (e.target as HTMLElement).closest('.spaces-icon-grid-item');
+            if (target) {
+                const iconName = target.getAttribute('data-icon');
+                if (iconName) {
+                    e.stopPropagation();
+                    this.onSelect(iconName);
+                    this.close();
+                }
+            }
+        };
     }
 
     onChooseSuggestion(item: string[], evt: MouseEvent | KeyboardEvent) {
